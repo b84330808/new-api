@@ -229,6 +229,41 @@ describe('pricing synchronization', () => {
     expect(source).toHaveFocus()
   })
 
+  it('stays on the current page when a price on a later page is selected', async () => {
+    const manyModels: PricingSyncModels = Object.fromEntries(
+      Array.from({ length: 12 }, (_, index) => [
+        `model-${String(index).padStart(2, '0')}`,
+        prices.m,
+      ])
+    )
+    const view = render(<TableFixture prices={manyModels} />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Go to next page' }))
+    const checkbox = await screen.findByRole('checkbox', {
+      name: 'Select price for model-11 from upstream',
+    })
+    await user.click(checkbox)
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'Select price for model-11 from upstream',
+      })
+    ).toBeChecked()
+    expect(
+      screen.queryByRole('checkbox', {
+        name: 'Select price for model-00 from upstream',
+      })
+    ).not.toBeInTheDocument()
+
+    // A new comparison clears the prices first and starts from the first page.
+    view.rerender(<TableFixture prices={{}} />)
+    view.rerender(<TableFixture prices={manyModels} />)
+    expect(
+      await screen.findByRole('checkbox', {
+        name: 'Select price for model-00 from upstream',
+      })
+    ).toBeInTheDocument()
+  })
+
   it('selects one complete source per model and keeps filtered-out selections', async () => {
     const candidates: PricingSyncModels = {
       ...prices,

@@ -16,8 +16,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import type { PaginationState } from '@tanstack/react-table'
 import { Search } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -159,11 +160,28 @@ export function UpstreamRatioSyncTable(props: UpstreamRatioSyncTableProps) {
     [filteredRows, sourceNames, props.selectedSources, showUnchanged]
   )
   const columns = useUpstreamRatioSyncColumns(sourceNames, isMobile)
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
+  const ensurePageInRange = useCallback((pageCount: number) => {
+    const lastPageIndex = Math.max(pageCount - 1, 0)
+    setPagination((prev) =>
+      prev.pageIndex > lastPageIndex
+        ? { ...prev, pageIndex: lastPageIndex }
+        : prev
+    )
+  }, [])
+  // Selecting a price rebuilds the rows, so keep the current page instead of
+  // jumping back to the first one; the filters below reset it explicitly.
   const { table } = useDataTable({
     data: filteredRows,
     columns,
     getRowId: (row) => row.model,
-    initialPagination: { pageIndex: 0, pageSize: 10 },
+    pagination,
+    onPaginationChange: setPagination,
+    ensurePageInRange,
+    autoResetPageIndex: false,
     withFilteredRowModel: false,
     withSortedRowModel: true,
     withFacetedRowModel: false,
